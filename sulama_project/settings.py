@@ -23,13 +23,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-u!q^z40kzls2e^o-uifay!g&6!3duy_i4m-(a+(xy*!y-(vvqp")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # CSRF trusted origins for production
 CSRF_TRUSTED_ORIGINS = [
-    'http://89.233.108.78:60',
+    'http://199.241.137.77:60',
     'http://89.233.108.78:60',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
