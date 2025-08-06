@@ -1,0 +1,352 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/contexts/ToastContext';
+import dynamic from 'next/dynamic';
+import 'leaflet/dist/leaflet.css';
+
+// API Base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+
+// Leaflet haritasını dinamik olarak yükle
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+
+export default function MakinaTakipPage() {
+    console.log('🎯 MakinaTakipPage component render ediliyor');
+    const { token } = useAuth();
+    const router = useRouter();
+    const toast = useToast();
+    
+    const [makinalar, setMakinalar] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [mapType, setMapType] = useState('street');
+    const [selectedMakina, setSelectedMakina] = useState(null);
+    const [mapReady, setMapReady] = useState(false);
+
+    useEffect(() => {
+        console.log('🔄 useEffect çalıştı - token:', token ? 'var' : 'yok');
+        
+        // Leaflet icon sorununu çöz
+        if (typeof window !== 'undefined') {
+            const L = require('leaflet');
+            delete L.Icon.Default.prototype._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            });
+            setMapReady(true);
+        }
+        
+        if (token) {
+            console.log('🔄 Token var, loadMakinalar çağrılıyor');
+            loadMakinalar();
+        } else {
+            console.log('🔄 Token yok, loadMakinalar çağrılmıyor');
+        }
+    }, [token]);
+
+    const loadMakinalar = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/sulama/makinalar/harita_verileri/`, {
+                headers: {
+                    'Authorization': `Token ${token}`,
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📊 Makinalar yüklendi:', data);
+                setMakinalar(data.makinalar || []);
+            } else {
+                console.error('Makinalar yüklenemedi:', response.status);
+                toast.error('Makinalar yüklenemedi');
+            }
+        } catch (error) {
+            console.error('Makinalar yüklenirken hata:', error);
+            toast.error('Makinalar yüklenirken hata oluştu');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getMakinaTypeIcon = (tip) => {
+        const icons = {
+            'traktor': '🚜',
+            'ekskavator': '🏗️',
+            'buldozer': '🚧',
+            'yukleyici': '📦',
+            'diger': '⚙️'
+        };
+        return icons[tip] || '🚜';
+    };
+
+    const getMakinaMarkerColor = (makinaTipi) => {
+        const colors = {
+            'traktor': '#3B82F6',
+            'ekskavator': '#10B981',
+            'buldozer': '#F59E0B',
+            'yukleyici': '#8B5CF6',
+            'diger': '#6B7280'
+        };
+        return colors[makinaTipi] || '#3B82F6';
+    };
+
+    // Özel marker icon oluştur
+    const createCustomIcon = (makinaTipi) => {
+        if (typeof window === 'undefined') return null;
+        
+        const L = require('leaflet');
+        const color = getMakinaMarkerColor(makinaTipi);
+        
+        return L.divIcon({
+            className: 'custom-marker',
+            html: `
+                <div style="
+                    background-color: ${color};
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 16px;
+                    font-weight: bold;
+                ">
+                    ${getMakinaTypeIcon(makinaTipi)}
+                </div>
+            `,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            popupAnchor: [0, -15]
+        });
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+                    <h3 className="mt-6 text-xl font-semibold text-blue-900">Makina Takip Yükleniyor...</h3>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Başlık */}
+                <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
+                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900">Makina Takip Sistemi</h1>
+                                <p className="text-gray-600 mt-1">Harita üzerinde makinelerin konumlarını takip edin</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => router.push('/makina-takip/ekle')}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                            Makina Ekle
+                        </button>
+                    </div>
+                </div>
+
+                {/* Harita Türü Seçimi */}
+                <div className="mb-8 p-4 bg-red-200 rounded-lg border-2 border-red-400 shadow-lg">
+                    <div className="text-center mb-2">
+                        <span className="text-xl font-bold text-red-800">🗺️ HARİTA TÜRÜ SEÇİMİ</span>
+                    </div>
+                    <div className="flex justify-center gap-4">
+                        <button
+                            onClick={() => {
+                                console.log('🚗 SOKAK BUTONUNA TIKLANDI!');
+                                setMapType('street');
+                            }}
+                            className={`px-6 py-3 rounded-lg text-lg font-bold border-2 ${
+                                mapType === 'street' 
+                                    ? 'bg-blue-600 text-white border-blue-700' 
+                                    : 'bg-white text-gray-700 border-gray-400 hover:bg-gray-100'
+                            }`}
+                        >
+                            🗺️ SOKAK
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🛰️ UYDU BUTONUNA TIKLANDI!');
+                                setMapType('satellite');
+                            }}
+                            className={`px-6 py-3 rounded-lg text-lg font-bold border-2 ${
+                                mapType === 'satellite' 
+                                    ? 'bg-orange-600 text-white border-orange-700' 
+                                    : 'bg-white text-gray-700 border-gray-400 hover:bg-gray-100'
+                            }`}
+                        >
+                            🛰️ UYDU
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🌍 HYBRID BUTONUNA TIKLANDI!');
+                                setMapType('hybrid');
+                            }}
+                            className={`px-6 py-3 rounded-lg text-lg font-bold border-2 ${
+                                mapType === 'hybrid' 
+                                    ? 'bg-green-600 text-white border-green-700' 
+                                    : 'bg-white text-gray-700 border-gray-400 hover:bg-gray-100'
+                            }`}
+                        >
+                            🌍 HYBRID
+                        </button>
+                    </div>
+                    <div className="text-center mt-2">
+                        <span className="text-lg font-bold text-red-700">Aktif: {mapType}</span>
+                    </div>
+                </div>
+
+                {/* Makina Sayısı */}
+                <div className="mb-4 p-3 bg-blue-100 rounded-lg">
+                    <p className="text-center font-bold text-blue-800">
+                        📊 Toplam Makina Sayısı: {makinalar.length}
+                    </p>
+                </div>
+
+                {/* Harita */}
+                <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Harita Görünümü</h2>
+                    
+                    <div className="w-full h-[600px] rounded-lg border border-gray-200 overflow-hidden">
+                        {mapReady && (
+                            <MapContainer 
+                                center={[40.8311, 35.6472]} 
+                                zoom={12} 
+                                style={{ height: '100%', width: '100%' }}
+                                key={`map-${mapType}-${Date.now()}`}
+                            >
+                                {mapType === 'street' && (
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    />
+                                )}
+                                
+                                {mapType === 'satellite' && (
+                                    <TileLayer
+                                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                        attribution='Tiles &copy; Esri'
+                                    />
+                                )}
+                                
+                                {mapType === 'hybrid' && (
+                                    <>
+                                        <TileLayer
+                                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                            attribution='Tiles &copy; Esri'
+                                        />
+                                        <TileLayer
+                                            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                                            attribution='Labels &copy; Esri'
+                                        />
+                                    </>
+                                )}
+                                
+                                {/* Makina Marker'ları */}
+                                {makinalar.map((makina) => {
+                                    console.log('🎯 Makina verisi:', makina);
+                                    console.log('🎯 Konum:', makina.son_konum?.enlem, makina.son_konum?.boylam);
+                                    
+                                    if (!makina.son_konum?.enlem || !makina.son_konum?.boylam) {
+                                        console.log('❌ Makina konum bilgisi eksik:', makina.isim);
+                                        return null;
+                                    }
+                                    
+                                    const position = [makina.son_konum.enlem, makina.son_konum.boylam];
+                                    const icon = createCustomIcon(makina.makina_tipi);
+                                    
+                                    return (
+                                        <Marker 
+                                            key={makina.id} 
+                                            position={position}
+                                            icon={icon}
+                                            eventHandlers={{
+                                                click: () => {
+                                                    console.log('Makina tıklandı:', makina);
+                                                    setSelectedMakina(makina);
+                                                }
+                                            }}
+                                        >
+                                            <Popup>
+                                                <div className="text-center p-2">
+                                                    <div className="text-2xl mb-2">{getMakinaTypeIcon(makina.makina_tipi)}</div>
+                                                    <h3 className="font-bold text-lg text-gray-900">{makina.isim}</h3>
+                                                    <p className="text-sm text-gray-600 mb-2">{makina.makina_tipi}</p>
+                                                    {makina.plaka && (
+                                                        <p className="text-sm text-gray-700">Plaka: {makina.plaka}</p>
+                                                    )}
+                                                    {makina.son_konum.hiz && (
+                                                        <p className="text-sm text-blue-600">Hız: {makina.son_konum.hiz} km/h</p>
+                                                    )}
+                                                    {makina.son_konum.yakit_seviyesi && (
+                                                        <p className="text-sm text-orange-600">Yakıt: %{makina.son_konum.yakit_seviyesi}</p>
+                                                    )}
+                                                    <p className="text-xs text-gray-500 mt-2">
+                                                        Durum: {makina.durum}
+                                                    </p>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    );
+                                })}
+                            </MapContainer>
+                        )}
+                    </div>
+                </div>
+
+                {/* Seçili Makina Detayları */}
+                {selectedMakina && (
+                    <div className="mt-6 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-gray-900">Seçili Makina Detayları</h3>
+                            <button
+                                onClick={() => setSelectedMakina(null)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p><strong>Makina Adı:</strong> {selectedMakina.isim}</p>
+                                <p><strong>Tip:</strong> {selectedMakina.makina_tipi}</p>
+                                <p><strong>Durum:</strong> {selectedMakina.durum}</p>
+                                {selectedMakina.plaka && <p><strong>Plaka:</strong> {selectedMakina.plaka}</p>}
+                                {selectedMakina.model && <p><strong>Model:</strong> {selectedMakina.model}</p>}
+                            </div>
+                            <div>
+                                <p><strong>Konum:</strong> {selectedMakina.son_konum?.enlem}, {selectedMakina.son_konum?.boylam}</p>
+                                {selectedMakina.son_konum?.hiz && <p><strong>Hız:</strong> {selectedMakina.son_konum.hiz} km/h</p>}
+                                {selectedMakina.son_konum?.yakit_seviyesi && <p><strong>Yakıt:</strong> %{selectedMakina.son_konum.yakit_seviyesi}</p>}
+                                <p><strong>Motor:</strong> {selectedMakina.son_konum?.motor_calisma ? 'Çalışıyor' : 'Durmuş'}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+} 

@@ -1,0 +1,25 @@
+{
+    "include": [
+        "sulama",
+        "sulama_project",
+        "authentication"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        ".git",
+        ".venv",
+        "gsp-frontend"
+    ],
+    "pythonVersion": "3.11",
+    "pythonPlatform": "Linux",
+    "extraPaths": [
+        ".",
+        "sulama_project"
+    ],
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "autoImportCompletions": true,
+    "reportMissingImports": "warning",
+    "reportMissingTypeStubs": false
+} 

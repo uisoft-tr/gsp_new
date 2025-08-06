@@ -1,0 +1,41 @@
+FROM python:3.11-slim
+
+# Sistem bağımlılıklarını yükle
+RUN apt-get update && apt-get install -y \
+  postgresql-client \
+  gcc \
+  python3-dev \
+  libpq-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Non-root user oluştur
+RUN useradd -m -u 1000 django && mkdir -p /app && chown django:django /app
+
+# Çalışma dizinini ayarla
+WORKDIR /app
+
+# Requirements dosyasını kopyala ve bağımlılıkları yükle
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Proje dosyalarını kopyala
+COPY . .
+
+# Static dosyaları topla
+RUN python manage.py collectstatic --noinput
+
+# Dosya sahipliklerini ayarla
+RUN chown -R django:django /app
+
+# Non-root user olarak çalış
+USER django
+
+# Port 8000'i aç
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD curl -f http://89.233.108.78:60/admin/ || exit 1
+
+# Gunicorn ile başlat
+CMD ["gunicorn", "sulama_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"] 
