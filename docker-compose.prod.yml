@@ -41,7 +41,7 @@ services:
         NEXT_PUBLIC_API_URL: "http://199.241.137.77:60"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://199.241.137.77:60/
+      - NEXT_PUBLIC_API_URL=http://199.241.137.77:8080/
     restart: unless-stopped
     networks:
       - app-network
