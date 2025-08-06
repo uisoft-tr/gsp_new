@@ -32,6 +32,9 @@ echo "▶️  Konteynerlar başlatılıyor..."
 docker compose -f docker-compose.prod.yml up -d
 
 # Database migration'larını çalıştır
+echo "📊 Database hazırlığı kontrol ediliyor..."
+docker compose -f docker-compose.prod.yml exec -T web python wait-for-db.py
+
 echo "📊 Database migration'ları uygulanıyor..."
 docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate
 

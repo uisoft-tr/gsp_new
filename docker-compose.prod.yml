@@ -1,6 +1,8 @@
 services:
   db:
     image: postgres:15
+    env_file:
+      - .env.prod
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -14,6 +16,8 @@ services:
   web:
     build: .
     command: gunicorn sulama_project.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    env_file:
+      - .env.prod
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
@@ -22,13 +26,13 @@ services:
     ports:
       - "8080:8000"
     environment:
-      - DEBUG=False
+      - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=db
-      - DB_PORT=5432
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
     restart: unless-stopped
     networks:
@@ -37,6 +41,8 @@ services:
   frontend:
     build:
       context: ./gsp-frontend
+    env_file:
+      - .env.prod
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${FRONTEND_API_URL}
