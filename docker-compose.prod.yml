@@ -1,12 +1,10 @@
 services:
   db:
     image: postgres:15
-    env_file:
-      - .env.prod
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: sulama_db_prod
+      POSTGRES_USER: sulama_user
+      POSTGRES_PASSWORD: Ardahan91185
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -16,8 +14,6 @@ services:
   web:
     build: .
     command: gunicorn sulama_project.wsgi:application --bind 0.0.0.0:8000 --workers 3
-    env_file:
-      - .env.prod
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
@@ -26,14 +22,14 @@ services:
     ports:
       - "8080:8000"
     environment:
-      - DEBUG=${DEBUG}
-      - SECRET_KEY=${SECRET_KEY}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DEBUG=False
+      - SECRET_KEY=yx1!*3xq8mhsao9+4)^&!(f&3cze*#pxijips#ob1s$g&yi99$&xsandernet91185
+      - DB_NAME=sulama_db_prod
+      - DB_USER=sulama_user
+      - DB_PASSWORD=Ardahan91185
+      - DB_HOST=db
+      - DB_PORT=5432
+      - ALLOWED_HOSTS=199.241.137.77,localhost,127.0.0.1
     restart: unless-stopped
     networks:
       - app-network
@@ -41,11 +37,9 @@ services:
   frontend:
     build:
       context: ./gsp-frontend
-    env_file:
-      - .env.prod
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${FRONTEND_API_URL}
+      - NEXT_PUBLIC_API_URL=http://199.241.137.77:60/
     restart: unless-stopped
     networks:
       - app-network
