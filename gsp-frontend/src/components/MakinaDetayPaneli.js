@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '../utils/api';
 
 export default function MakinaDetayPaneli({ makina, onClose, onEdit, onDelete, onFinishWork, onGoToLocation }) {
     const [isler, setIsler] = useState([]);
@@ -38,7 +39,7 @@ export default function MakinaDetayPaneli({ makina, onClose, onEdit, onDelete, o
             console.log('✅ Token:', token ? 'Mevcut' : 'Yok');
             
             // API URL'ini düzelt - makina ID'sini doğru şekilde gönder
-            const apiUrl = `http://localhost:8001/api/sulama/makina-isler/?makina=${makina.id}`;
+            const apiUrl = `http://199.241.137.77:8080/api/sulama/makina-isler/?makina=${makina.id}`;
             console.log('🌐 API URL:', apiUrl);
             
             console.log('📡 API çağrısı yapılıyor...');
@@ -162,7 +163,7 @@ export default function MakinaDetayPaneli({ makina, onClose, onEdit, onDelete, o
             }
 
             // İşi tamamla
-            const response = await fetch(`http://localhost:8001/api/sulama/makina-isler/${aktifIs.id}/is_tamamla/`, {
+            const response = await fetch(`http://199.241.137.77:8080/api/sulama/makina-isler/${aktifIs.id}/is_tamamla/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Token ${token}`,

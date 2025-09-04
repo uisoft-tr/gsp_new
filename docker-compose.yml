@@ -1,6 +1,9 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:15
+    container_name: postgres-db
     environment:
       POSTGRES_DB: sulama_db
       POSTGRES_USER: postgres
@@ -9,9 +12,25 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
+    restart: always
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin-tambis
+    environment:
+      PGADMIN_DEFAULT_EMAIL: info@uisoft.tech
+      PGADMIN_DEFAULT_PASSWORD: ardahan91185
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: always
 
   web:
     build: .
+    container_name: django-web
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
@@ -25,11 +44,13 @@ services:
       resources:
         limits:
           memory: 1g
+    restart: always
 
   frontend:
     build:
       context: ./gsp-frontend
     working_dir: /app
+    container_name: gsp-frontend
     volumes:
       - ./gsp-frontend:/app
       - /app/node_modules
@@ -45,9 +66,11 @@ services:
       resources:
         limits:
           memory: 2g
+    restart: always
 
   nginx:
     image: nginx:alpine
+    container_name: nginx-proxy
     ports:
       - "80:80"
     volumes:
@@ -55,6 +78,8 @@ services:
     depends_on:
       - web
       - frontend
+    restart: always
 
 volumes:
   postgres_data:
+  pgadmin_data:
