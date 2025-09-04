@@ -21,6 +21,8 @@ services:
     depends_on:
       - db
     restart: always
+    networks:
+      - app-network
 
   web:
     build: .
