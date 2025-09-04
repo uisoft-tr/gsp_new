@@ -20,15 +20,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-u!q^z40kzls2e^o-uifay!g&6!3duy_i4m-(a+(xy*!y-(vvqp"
+SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-u!q^z40kzls2e^o-uifay!g&6!3duy_i4m-(a+(xy*!y-(vvqp")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # CSRF trusted origins for production
 CSRF_TRUSTED_ORIGINS = [
+    'http://199.241.137.77:60',
     'http://89.233.108.78:60',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
@@ -96,11 +97,11 @@ WSGI_APPLICATION = "sulama_project.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sulama_db',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres123',
-        'HOST': 'db',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'sulama_db'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres123'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
